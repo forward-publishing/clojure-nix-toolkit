@@ -1,11 +1,11 @@
---- a/rama
-+++ b/rama
-@@ -4,7 +4,7 @@ import os
- import sys
- import subprocess as sub
- import argparse
+--- a/rama 2025-06-29 02:29:22
++++ b/rama 2025-12-08 17:45:35
+@@ -7,7 +7,7 @@
  import shutil
+ import subprocess
  
 -RAMA_DIR = "/".join(os.path.realpath( __file__ ).split("/")[:-1])
 +RAMA_DIR = "@ramaDir@"
+ 
+ LOG_TO_STDOUT = ["-Drama.log4j.appender=stdout", "-Dlogfile.path=/dev/null"];
  
