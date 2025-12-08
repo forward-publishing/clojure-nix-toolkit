@@ -1,0 +1,11 @@
+--- a/rama
++++ b/rama
+@@ -4,7 +4,7 @@ import os
+ import sys
+ import subprocess as sub
+ import argparse
+ import shutil
+ 
+-RAMA_DIR = "/".join(os.path.realpath( __file__ ).split("/")[:-1])
++RAMA_DIR = "@ramaDir@"
+ 
