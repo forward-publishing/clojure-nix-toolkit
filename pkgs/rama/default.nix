@@ -2,10 +2,43 @@
   stdenvNoCC,
   lib,
   fetchzip,
-  jre,
+  jdk,
   python3,
   replaceVars,
 }:
+
+/*
+  Rama package builder for different versions.
+
+  Each rama version (rama10, rama11, rama12) can be customized by overriding the following attributes:
+
+  - ramaDir: Path where Rama will store its configuration and data
+    Default: ${placeholder "out"}/share/rama (inside the Nix store)
+    Override example:
+      rama10.override { ramaDir = "/var/lib/rama"; }
+
+  - jdk: The Java Development Kit to use
+    Default: jdk (from nixpkgs)
+    Override example:
+      rama10.override { jdk = jdk17; }
+
+  - backupProviders: List of additional JAR files to include in lib/
+    Default: [] (empty list)
+    Override example:
+      rama10.override {
+        backupProviders = [
+          ./custom-provider-1.jar
+          ./custom-provider-2.jar
+        ];
+      }
+
+  Multiple attributes can be overridden simultaneously:
+    rama12.override {
+      ramaDir = "/opt/rama";
+      jdk = jdk21;
+      backupProviders = [ ./my-backup-provider.jar ];
+    }
+*/
 
 let
   mkRama =
@@ -13,6 +46,8 @@ let
       version,
       sha256,
       ramaDir ? null,
+      jdk ? jdk,
+      backupProviders ? [ ],
     }:
     stdenvNoCC.mkDerivation {
       pname = "rama";
@@ -24,7 +59,10 @@ let
         inherit sha256;
       };
 
-      buildInputs = [ python3 ];
+      buildInputs = [
+        python3
+        jdk
+      ];
 
       patches = [
         (replaceVars ./rama-dir.patch {
@@ -44,6 +82,12 @@ let
         cp rama $out/bin/rama
         rm $out/share/rama/rama
         chmod +x $out/bin/rama
+
+        # Install backup providers
+        mkdir -p $out/share/rama/lib
+        ${lib.concatMapStringsSep "\n" (provider: ''
+          cp ${provider} $out/share/rama/lib/
+        '') backupProviders}
 
         runHook postInstall
       '';
