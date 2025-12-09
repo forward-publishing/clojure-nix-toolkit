@@ -47,7 +47,12 @@
         in
         {
           kmono = pkgs.callPackage ./pkgs/kmono { };
-          inherit (ramaPackages) rama10 rama11 rama12;
+          inherit (ramaPackages)
+            rama10
+            rama11
+            rama12
+            ramaBackupProviders
+            ;
         }
       );
 
@@ -111,7 +116,12 @@
           # Clojure monorepo management tool
           kmono = final.callPackage ./pkgs/kmono { };
           # rama pacakages
-          inherit (ramaPackages) rama10 rama11 rama12;
+          inherit (ramaPackages)
+            rama10
+            rama11
+            rama12
+            ramaBackupProviders
+            ;
 
         };
 

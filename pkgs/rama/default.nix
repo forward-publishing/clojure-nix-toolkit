@@ -2,6 +2,7 @@
   stdenvNoCC,
   lib,
   fetchzip,
+  fetchurl,
   jdk,
   python3,
   replaceVars,
@@ -41,12 +42,19 @@
 */
 
 let
+  defaultJdk = jdk;
+
+  s3BackupProvider = fetchurl {
+    url = "https://github.com/redplanetlabs/rama-s3-backup-provider/releases/download/1.1.0/rama-s3-backup-provider-1.1.0.jar";
+    sha256 = "sha256-/VX493rE/zPJD2j1avGDL8lPRU7/22WgKvkQIb9Rrwc=";
+  };
+
   mkRama =
     {
       version,
       sha256,
       ramaDir ? null,
-      jdk ? jdk,
+      jdk ? defaultJdk,
       backupProviders ? [ ],
     }:
     stdenvNoCC.mkDerivation {
@@ -73,14 +81,13 @@ let
       installPhase = ''
         runHook preInstall
 
-        # Install jars in share directory
+        # Install the whole package in share/rama
         mkdir -p $out/share/rama
         cp -R ./*  $out/share/rama/
 
-        # Install the rama Python script
+        # move the binary i
         mkdir -p $out/bin
-        cp rama $out/bin/rama
-        rm $out/share/rama/rama
+        mv  $out/share/rama/rama $out/bin/rama
         chmod +x $out/bin/rama
 
         # Install backup providers
@@ -114,5 +121,9 @@ in
   rama12 = mkRama {
     version = "1.2.0";
     sha256 = "sha256-W85f97QZ33ykADesGV1vN3wHZOD2kuYMQ+d2zReZKJI=";
+  };
+
+  ramaBackupProviders = {
+    s3 = s3BackupProvider;
   };
 }
