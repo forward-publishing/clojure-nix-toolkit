@@ -3,9 +3,7 @@
 }:
 
 let
-  fetchCljDeps = import ../deps/fetch-clj-deps.nix {
-    inherit (pkgs) lib stdenvNoCC;
-  };
+  fetchCljDeps = pkgs.callPackage ../deps/fetch-clj-deps.nix { };
 
   # Test project sources
   testProjectSrc = ./test-clj-project;
@@ -28,11 +26,10 @@ in
 {
   # Test 1: Basic dependency fetching with simple project
   test-basic-fetch = fetchCljDeps {
-    pname = "test-basic";
-    version = "0.1.0";
+    name = "test-basic-deps";
     src = testProjectSrc;
     clojure = pkgs.clojure;
-    hash = "sha256-IlZ6J1SAQN/70XA4ShYhSaCDKcM0GXx4sGbSSmtuD5w=";
+    hash = "sha256-h3t6UYFk8OaQ/58xraiY9uE3ATEPfQByeOmUvwvbrO0=";
   };
 
   # Test 2: Fetching with specific hash (prevents network access in build)

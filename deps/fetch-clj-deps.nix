@@ -13,10 +13,8 @@
 # Parameters:
 #   src          - Source directory containing deps.edn
 #   clojure      - Clojure package to use for dependency resolution
-#   pname        - Package name for the derivation
-#   version      - Version string
 #   hash         - Expected output hash (empty string for initial build to discover hash)
-#   prepPhase    - Command to run for dependency preparation (default: "clojure -P")
+#   prepCommand  - Command to run for dependency preparation (default: "clojure -P")
 #
 # Usage example:
 #   fetchCljDeps {
@@ -38,10 +36,14 @@
 {
   src,
   clojure,
-  pname,
-  version,
+  name,
   hash ? "",
-  prepPhase ? "clojure -P",
+  srcRoot ? ".",
+  aliases ? [ ],
+  prepCommand ? ''
+    cd ${srcRoot}
+    ${if (aliases == [ ]) then "clojure -P" else "clojure -P -A${lib.concatStrings aliases}"}
+  '',
   ...
 }@args:
 let
@@ -67,8 +69,7 @@ stdenvNoCC.mkDerivation (
     "prepPhase"
   ])
   // {
-    pname = "clj-deps-${pname}";
-    inherit src version;
+    inherit src name;
 
     nativeBuildInputs = (args.nativeBuildInputs or [ ]) ++ [
       clojure
@@ -90,7 +91,7 @@ stdenvNoCC.mkDerivation (
       echo "{:mvn/local-repo \"$out/.m2/repository\"}" > $CLJ_CONFIG/deps.edn
 
       # In Nix sandbox, JVM uses /var/empty as user.home, so we must override it
-      clojure -P
+      ${prepCommand}
 
       rm $CLJ_CONFIG/deps.edn
 

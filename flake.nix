@@ -96,7 +96,7 @@
               # Example usage:
               #   pkgs.clojure.buildClojureDepsPackage {
               #     pname = "my-clojure-app";
-              #     version = "1.0.0";
+              #     version = "1.0.0";h
               #     src = ./.;
               #     cljDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
               #
