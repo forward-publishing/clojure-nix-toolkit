@@ -17,6 +17,9 @@
   ...
 }@args:
 let
+  fetchCljDeps = import ./fetch-clj-deps.nix {
+    inherit lib stdenvNoCC;
+  };
   fetchedCljDeps = stdenvNoCC.mkDerivation {
     pname = "clj-deps-${pname}";
     inherit
@@ -82,6 +85,7 @@ let
     dontUnpack = true;
 
     nativeBuildInputs = [
+      fetchedCljDeps
       clojure
       makeWrapper
     ];
@@ -106,17 +110,22 @@ let
     '';
   };
 in
-stdenvNoCC.mkDerivation args
-// {
-  inherit fetchedCljDeps;
+stdenvNoCC.mkDerivation (
+  args
+  // {
+    inherit fetchedCljDeps;
 
-  nativeBuildInputs = args.nativeBuildInputs or [ ] ++ [
-    clojureWithDeps
-  ];
+    nativeBuildInputs = args.nativeBuildInputs or [ ] ++ [
+      clojureWithDeps
+    ];
 
-  # INSTALL
-  # - copy over all dependencies into $out/share/pname/[m2|gitlibs]
-  # - copy over the jarfile or target/classes into $out/sh
-  # - copy over the
+    passthru = (args.passthru or { }) // {
+      cljDeps = fetchedCljDeps;
+    };
+    # INSTALL
+    # - copy over all dependencies into $out/share/pname/[m2|gitlibs]
+    # - copy over the jarfile or target/classes into $out/sh
+    # - copy over the
 
-}
+  }
+)
