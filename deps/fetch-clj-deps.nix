@@ -14,14 +14,40 @@
 #   src          - Source directory containing deps.edn
 #   clojure      - Clojure package to use for dependency resolution
 #   hash         - Expected output hash (empty string for initial build to discover hash)
-#   prepCommand  - Command to run for dependency preparation (default: "clojure -P")
+#   prep         - Preparation specification, can be:
+#                  * A string: interpreted as a shell command to execute
+#                  * An attribute set with { srcRoot, aliases }: cd to srcRoot and run clojure -P with aliases
+#                  * A list of attribute sets: run preparation for each set sequentially
 #
-# Usage example:
+# Usage examples:
+#   # Simple command
 #   fetchCljDeps {
-#     inherit src clojure makeWrapper;
-#     pname = "my-app";
-#     version = "0.1.0";
-#     hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+#     inherit src clojure;
+#     name = "my-app-deps";
+#     prep = "clojure -P";
+#     hash = "sha256-...";
+#   }
+#
+#   # Single preparation with srcRoot and aliases
+#   fetchCljDeps {
+#     inherit src clojure;
+#     name = "my-app-deps";
+#     prep = {
+#       srcRoot = "subproject";
+#       aliases = [ ":dev" ":test" ];
+#     };
+#     hash = "sha256-...";
+#   }
+#
+#   # Multiple preparations
+#   fetchCljDeps {
+#     inherit src clojure;
+#     name = "my-app-deps";
+#     prep = [
+#       { srcRoot = "project-a"; aliases = [ ":dev" ]; }
+#       { srcRoot = "project-b"; aliases = [ ":test" ]; }
+#     ];
+#     hash = "sha256-...";
 #   }
 #
 # The output derivation structure:
@@ -38,12 +64,7 @@
   clojure,
   name,
   hash ? "",
-  srcRoot ? ".",
-  aliases ? [ ],
-  prepCommand ? ''
-    cd ${srcRoot}
-    ${if (aliases == [ ]) then "clojure -P" else "clojure -P -A${lib.concatStrings aliases}"}
-  '',
+  prep ? "clojure -P",
   ...
 }@args:
 let
@@ -61,12 +82,36 @@ let
         outputHashAlgo = "sha256";
         outputHashMode = "recursive";
       };
+
+  # Convert a single prep spec to a shell command
+  prepSpecToCommand =
+    spec:
+    let
+      srcRoot = spec.srcRoot or ".";
+      aliases = spec.aliases or [ ];
+      aliasesStr = if (aliases == [ ]) then "" else " -A${lib.concatStrings aliases}";
+    in
+    ''
+      (cd ${srcRoot} && clojure -P${aliasesStr})
+    '';
+
+  # Generate the preparation command based on prep type
+  prepCommand =
+    if lib.isString prep then
+      # Case 1: prep is a string - use it directly as a command
+      prep
+    else if lib.isList prep then
+      # Case 3: prep is a list - run each spec sequentially
+      lib.concatMapStrings prepSpecToCommand prep
+    else
+      # Case 2: prep is an attribute set - convert to command
+      prepSpecToCommand prep;
 in
 stdenvNoCC.mkDerivation (
   (builtins.removeAttrs args [
     "clojure"
     "hash"
-    "prepPhase"
+    "prep"
   ])
   // {
     inherit src name;

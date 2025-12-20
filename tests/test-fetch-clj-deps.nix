@@ -24,7 +24,7 @@ let
 
 in
 {
-  # Test 1: Basic dependency fetching with simple project
+  # Test 1: Basic dependency fetching with simple project (default prep)
   test-basic-fetch = fetchCljDeps {
     name = "test-basic-deps";
     src = testProjectSrc;
@@ -49,12 +49,15 @@ in
     hash = "";
   };
 
-  # Test 4: Fetching with aliases
+  # Test 4: Fetching with aliases using prep attribute set
   test-with-aliases = fetchCljDeps {
     name = "test-clj-deps-with-aliases";
     src = complexProjectSrc;
     clojure = pkgs.clojure;
-    aliases = [ "test" ];
+    prep = {
+      srcRoot = ".";
+      aliases = [ ":test" ];
+    };
     hash = "";
   };
 
@@ -66,16 +69,16 @@ in
     hash = "";
   };
 
-  # Test 6: Custom prep command
+  # Test 6: Custom prep command (string format)
   test-custom-prep = fetchCljDeps {
     name = "test-custom-prep";
     src = testProjectSrc;
     clojure = pkgs.clojure;
-    prepCommand = "clojure -P -M:dev 2>&1 || true"; # Allow failure for non-existent alias
+    prep = "clojure -P -M:dev 2>&1 || true"; # Allow failure for non-existent alias
     hash = "";
   };
 
-  # Test 7: Subdirectory source root
+  # Test 7: Subdirectory source root using prep attribute set
   test-srcroot =
     let
       nestedSrc = pkgs.runCommand "nested-project" { } ''
@@ -89,11 +92,61 @@ in
       name = "test-srcroot-clj-deps";
       src = nestedSrc;
       clojure = pkgs.clojure;
-      srcRoot = "subdir";
+      prep = {
+        srcRoot = "subdir";
+        aliases = [ ];
+      };
       hash = "";
     };
 
-  # Test 8: Verification test - check output structure
+  # Test 8: Multiple preparations using prep list
+  test-multi-prep =
+    let
+      multiProjectSrc = pkgs.runCommand "multi-project" { } ''
+        mkdir -p $out/project-a
+        mkdir -p $out/project-b
+        cat > $out/project-a/deps.edn <<EOF
+        {:deps {org.clojure/clojure {:mvn/version "1.11.1"}}
+         :aliases {:dev {:extra-deps {org.clojure/data.json {:mvn/version "2.4.0"}}}}}
+        EOF
+        cat > $out/project-b/deps.edn <<EOF
+        {:deps {org.clojure/clojure {:mvn/version "1.11.1"}}
+         :aliases {:test {:extra-deps {cheshire/cheshire {:mvn/version "5.11.0"}}}}}
+        EOF
+      '';
+    in
+    fetchCljDeps {
+      name = "test-multi-prep";
+      src = multiProjectSrc;
+      clojure = pkgs.clojure;
+      prep = [
+        {
+          srcRoot = "project-a";
+          aliases = [ ":dev" ];
+        }
+        {
+          srcRoot = "project-b";
+          aliases = [ ":test" ];
+        }
+      ];
+      hash = "";
+    };
+
+  # Test 9: Prep with multiple aliases
+  test-multiple-aliases = fetchCljDeps {
+    name = "test-multiple-aliases";
+    src = complexProjectSrc;
+    clojure = pkgs.clojure;
+    prep = {
+      aliases = [
+        ":test"
+        ":dev"
+      ];
+    };
+    hash = "";
+  };
+
+  # Test 10: Verification test - check output structure
   test-output-structure =
     pkgs.runCommand "test-fetch-clj-deps-structure"
       {
@@ -136,7 +189,7 @@ in
         echo "Found $(cat $out | wc -l) ephemeral files to clean"
       '';
 
-  # Test 9: Integration test - use fetched deps
+  # Test 11: Integration test - use fetched deps
   test-integration =
     let
       deps = fetchCljDeps {
