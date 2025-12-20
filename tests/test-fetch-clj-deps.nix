@@ -7,16 +7,6 @@ let
     inherit (pkgs) lib stdenvNoCC;
   };
 
-  # Helper to call fetchCljDeps with common parameters
-  mkFetchCljDeps =
-    args:
-    fetchCljDeps (
-      args
-      // {
-        inherit (pkgs) makeWrapper;
-      }
-    );
-
   # Test project sources
   testProjectSrc = ./test-clj-project;
 
@@ -37,12 +27,12 @@ let
 in
 {
   # Test 1: Basic dependency fetching with simple project
-  test-basic-fetch = mkFetchCljDeps {
+  test-basic-fetch = fetchCljDeps {
     pname = "test-basic";
     version = "0.1.0";
     src = testProjectSrc;
     clojure = pkgs.clojure;
-    hash = "sha256-NDNu/+unAlxDd+hk+e0GZMWlGumJkZlnIDvF45eV0Fk=";
+    hash = "sha256-h3t6UYFk8OaQ/58xraiY9uE3ATEPfQByeOmUvwvbrO0=";
   };
 
   # Test 2: Fetching with specific hash (prevents network access in build)
@@ -55,7 +45,7 @@ in
   # };
 
   # Test 3: Complex project with multiple dependencies
-  test-complex-deps = mkFetchCljDeps {
+  test-complex-deps = fetchCljDeps {
     name = "test-complex-clj-deps";
     src = complexProjectSrc;
     clojure = pkgs.clojure;
@@ -63,7 +53,7 @@ in
   };
 
   # Test 4: Fetching with aliases
-  test-with-aliases = mkFetchCljDeps {
+  test-with-aliases = fetchCljDeps {
     name = "test-clj-deps-with-aliases";
     src = complexProjectSrc;
     clojure = pkgs.clojure;
@@ -72,7 +62,7 @@ in
   };
 
   # Test 5: Git dependencies
-  test-git-deps = mkFetchCljDeps {
+  test-git-deps = fetchCljDeps {
     name = "test-git-clj-deps";
     src = gitDepsProjectSrc;
     clojure = pkgs.clojure;
@@ -80,7 +70,7 @@ in
   };
 
   # Test 6: Custom prep command
-  test-custom-prep = mkFetchCljDeps {
+  test-custom-prep = fetchCljDeps {
     name = "test-custom-prep";
     src = testProjectSrc;
     clojure = pkgs.clojure;
@@ -98,7 +88,7 @@ in
         EOF
       '';
     in
-    mkFetchCljDeps {
+    fetchCljDeps {
       name = "test-srcroot-clj-deps";
       src = nestedSrc;
       clojure = pkgs.clojure;
@@ -152,7 +142,7 @@ in
   # Test 9: Integration test - use fetched deps
   test-integration =
     let
-      deps = mkFetchCljDeps {
+      deps = fetchCljDeps {
         name = "integration-test-deps";
         src = testProjectSrc;
         clojure = pkgs.clojure;

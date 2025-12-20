@@ -13,7 +13,6 @@
 # Parameters:
 #   src          - Source directory containing deps.edn
 #   clojure      - Clojure package to use for dependency resolution
-#   makeWrapper  - makeWrapper utility for creating wrapper scripts
 #   pname        - Package name for the derivation
 #   version      - Version string
 #   hash         - Expected output hash (empty string for initial build to discover hash)
@@ -39,7 +38,6 @@
 {
   src,
   clojure,
-  makeWrapper,
   pname,
   version,
   hash ? "",
@@ -53,17 +51,18 @@ let
       {
         outputHash = hash;
         outputHashAlgo = null; # inferred from hash format
+        outputHashMode = "recursive";
       }
     else
       {
         outputHash = "";
         outputHashAlgo = "sha256";
+        outputHashMode = "recursive";
       };
 in
 stdenvNoCC.mkDerivation (
   (builtins.removeAttrs args [
     "clojure"
-    "makeWrapper"
     "hash"
     "prepPhase"
   ])
@@ -73,7 +72,6 @@ stdenvNoCC.mkDerivation (
 
     nativeBuildInputs = (args.nativeBuildInputs or [ ]) ++ [
       clojure
-      makeWrapper
     ];
 
     buildPhase = ''
@@ -85,11 +83,16 @@ stdenvNoCC.mkDerivation (
       # Set GITLIBS environment variable for git dependencies
       export GITLIBS=$out/.gitlibs
 
-      # Use -Sdeps to set :mvn/local-repo without modifying deps.edn
-      # We need to properly quote and escape for the shell
-      clojure -Sdeps "{:mvn/local-repo \"$out/.m2\"}" -P
-      # ${prepPhase}
+      # Create Clojure config directory with deps.edn containing :mvn/local-repo
+      # Use relative path to avoid store path references in fixed-output derivation
+      export CLJ_CONFIG=$out/.clojure
+      mkdir -p $CLJ_CONFIG
+      echo "{:mvn/local-repo \"$out/.m2/repository\"}" > $CLJ_CONFIG/deps.edn
 
+      # In Nix sandbox, JVM uses /var/empty as user.home, so we must override it
+      clojure -P
+
+      rm $CLJ_CONFIG/deps.edn
       runHook postBuild
     '';
 
@@ -108,7 +111,6 @@ stdenvNoCC.mkDerivation (
 
     # don't do any fixup
     dontFixup = true;
-    outputHashMode = "recursive";
   }
   // hashAttrs
 )
