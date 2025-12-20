@@ -32,7 +32,7 @@ in
     version = "0.1.0";
     src = testProjectSrc;
     clojure = pkgs.clojure;
-    hash = "sha256-h3t6UYFk8OaQ/58xraiY9uE3ATEPfQByeOmUvwvbrO0=";
+    hash = "sha256-IlZ6J1SAQN/70XA4ShYhSaCDKcM0GXx4sGbSSmtuD5w=";
   };
 
   # Test 2: Fetching with specific hash (prevents network access in build)

@@ -93,6 +93,7 @@ stdenvNoCC.mkDerivation (
       clojure -P
 
       rm $CLJ_CONFIG/deps.edn
+
       runHook postBuild
     '';
 
