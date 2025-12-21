@@ -42,76 +42,35 @@
       # - means to package
       packages = forEachSupportedSystem (
         { pkgs, ... }:
-        let
-          ramaPackages = pkgs.callPackage ./pkgs/rama { };
-        in
         {
-          kmono = pkgs.callPackage ./pkgs/kmono { };
-          inherit (ramaPackages)
+          inherit (pkgs)
+            kmono
             rama10
             rama11
             rama12
             ramaBackupProviders
+            buildClojureDepsPackage
+            fetchCljDeps
             ;
         }
       );
 
-      # Nixpkgs overlay
-      #
-      # Extends the clojure package with a buildClojureDepsPackage function
-      # accessible via pkgs.clojure.buildClojureDepsPackage
-      #
-      # Usage in other flakes:
-      #   inputs.clojure-nix-toolkit.overlays.default
-      #
-      # Usage in nixpkgs import:
-      #   pkgs = import nixpkgs {
-      #     overlays = [ inputs.clojure-nix-toolkit.overlays.default ];
-      #   };
       overlays.default =
         final: prev:
         let
+          # By default we're on Java 25
+          jdk = final.zulu25;
+
           ramaPackages = final.callPackage ./pkgs/rama { };
+          fetchCljDeps = final.callPackage ./deps/fetch-clj-deps.nix { };
+          buildClojureDepsPackage = final.callPackage ./deps/build-clj-deps-package.nix { };
         in
         {
-          clojure = prev.clojure.overrideAttrs (oldAttrs: {
-            passthru = (oldAttrs.passthru or { }) // {
-              # Build function for Clojure projects with dependency management.
-              # Inspired by maven.buildMavenPackage
-              #
-              # This function creates a Nix derivation for Clojure projects by:
-              # 1. Fetching and caching all Clojure dependencies (Maven .m2 and gitlibs) in a separate fixed-output derivation
-              # 2. Creating wrapped clojure/clj commands that use the cached dependencies
-              # 3. Providing the wrapped commands to your build phase via nativeBuildInputs
-              #
-              # The dependency fetching is content-addressed (via cljDepsHash), enabling Nix to cache
-              # dependencies across builds and share them between projects.
-              #
-              # Required arguments:
-              #   src         - Source directory of your Clojure project
-              #   cljDepsHash   - SHA256 hash of fetched dependencies (empty string for initial build)
-              #
-              # Along with normal arguments you would pass to mkDerivation (e.g. buildPhase)
-              #
-              # Example usage:
-              #   pkgs.clojure.buildClojureDepsPackage {
-              #     pname = "my-clojure-app";
-              #     version = "1.0.0";h
-              #     src = ./.;
-              #     cljDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-              #
-              #     buildPhase = ''
-              #       clojure -T:build uber
-              #     '';
-              #
-              #     installPhase = ''
-              #       mkdir -p $out/bin
-              #       cp target/my-app.jar $out/bin/
-              #     '';
-              #   }
-              buildClojureDepsPackage = final.callPackage ./deps/build-clj-deps-package.nix { };
-            };
-          });
+
+          # Set default Javs
+          jdk_headless = jdk;
+          jre = jdk;
+          jre_headless = jdk;
 
           # Clojure monorepo management tool
           kmono = final.callPackage ./pkgs/kmono { };
@@ -123,6 +82,7 @@
             ramaBackupProviders
             ;
 
+          inherit jdk fetchCljDeps buildClojureDepsPackage;
         };
 
       # Development environments output by this flake
@@ -152,6 +112,30 @@
             shellHook = "";
           };
         }
+      );
+
+      # Checks output for CI/testing
+      #
+      # Run all checks with: nix flake check
+      # Run specific check with: nix build .#checks.<system>.<check-name>
+      checks = forEachSupportedSystem (
+        { pkgs, ... }:
+        let
+          inherit (pkgs) buildClojureDepsPackage fetchCljDeps;
+
+          # Import test suites with callPackage to provide dependencies
+          buildTests = pkgs.callPackage ./tests/test-build-clj-deps.nix {
+            inherit buildClojureDepsPackage;
+          };
+          fetchTests = pkgs.callPackage ./tests/test-fetch-clj-deps.nix {
+            inherit fetchCljDeps;
+          };
+
+          # Filter out non-derivation attributes like 'override' and 'overrideDerivation'
+          filterDerivations = attrs: pkgs.lib.filterAttrs (name: value: pkgs.lib.isDerivation value) attrs;
+        in
+        # Merge both test suites into checks, filtering out non-derivations
+        (filterDerivations buildTests) // (filterDerivations fetchTests)
       );
 
       # Nix formatter

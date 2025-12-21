@@ -57,14 +57,17 @@
 {
   lib,
   stdenvNoCC,
-}:
+  clojure,
+}@pargs:
 
 {
   src,
-  clojure,
+  clojure ? pargs.clojure,
   name,
   hash ? "",
-  prep ? "clojure -P",
+  prep ? {
+    srcRoot = ".";
+  },
   ...
 }@args:
 let
@@ -120,43 +123,35 @@ stdenvNoCC.mkDerivation (
       clojure
     ];
 
+    dontConfigure = true;
+
     buildPhase = ''
       runHook preBuild
 
-      # Set HOME so Clojure can create .clojure directory
+      # Force clojure cli to use $out/.m2/repository and $out/.gitlibs
+      # as local repositories
       export HOME=$out
-
-      # Set GITLIBS environment variable for git dependencies
       export GITLIBS=$out/.gitlibs
-
-      # Create Clojure config directory with deps.edn containing :mvn/local-repo
-      # Use relative path to avoid store path references in fixed-output derivation
       export CLJ_CONFIG=$out/.clojure
       mkdir -p $CLJ_CONFIG
       echo "{:mvn/local-repo \"$out/.m2/repository\"}" > $CLJ_CONFIG/deps.edn
 
-      # In Nix sandbox, JVM uses /var/empty as user.home, so we must override it
       ${prepCommand}
 
+      # nix complains if fixed-output derivations have links to other derivations
       rm $CLJ_CONFIG/deps.edn
 
-      runHook postBuild
-    '';
-
-    # keep only *.{pom,jar,sha1,nbm} and delete all ephemeral files with lastModified timestamps inside
-    installPhase = ''
-      runHook preInstall
-
+      # cleanup after maven
       find $out -type f \( \
         -name "*.lastUpdated" \
         -o -name "resolver-status.properties" \
         -o -name "_remote.repositories" \
       \) -delete
 
-      runHook postInstall
+      runHook postBuild
     '';
 
-    # don't do any fixup
+    dontInstall = true;
     dontFixup = true;
   }
   // hashAttrs

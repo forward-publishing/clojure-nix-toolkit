@@ -1,15 +1,17 @@
 {
-  pkgs ? import <nixpkgs> { },
+  fetchCljDeps,
+  clojure,
+  writeTextDir,
+  runCommand,
+  findutils,
 }:
 
 let
-  fetchCljDeps = pkgs.callPackage ../deps/fetch-clj-deps.nix { };
-
   # Test project sources
   testProjectSrc = ./test-clj-project;
 
   # Create a more complex test project with multiple dependencies
-  complexProjectSrc = pkgs.writeTextDir "deps.edn" ''
+  complexProjectSrc = writeTextDir "deps.edn" ''
     {:deps {org.clojure/clojure {:mvn/version "1.11.1"}
             org.clojure/data.json {:mvn/version "2.4.0"}
             cheshire/cheshire {:mvn/version "5.11.0"}}
@@ -17,7 +19,7 @@ let
   '';
 
   # Test project with git dependencies
-  gitDepsProjectSrc = pkgs.writeTextDir "deps.edn" ''
+  gitDepsProjectSrc = writeTextDir "deps.edn" ''
     {:deps {org.clojure/clojure {:mvn/version "1.11.1"}
             io.github.clojure/tools.build {:git/tag "v0.9.6" :git/sha "8e78bcc"}}}
   '';
@@ -28,7 +30,7 @@ in
   test-basic-fetch = fetchCljDeps {
     name = "test-basic-deps";
     src = testProjectSrc;
-    clojure = pkgs.clojure;
+    inherit clojure;
     hash = "sha256-h3t6UYFk8OaQ/58xraiY9uE3ATEPfQByeOmUvwvbrO0=";
   };
 
@@ -37,7 +39,7 @@ in
   # test-basic-fetch-with-hash = fetchCljDeps {
   #   name = "test-basic-clj-deps-hashed";
   #   src = testProjectSrc;
-  #   clojure = pkgs.clojure;
+  #   inherit clojure;
   #   hash = "sha256-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX=";
   # };
 
@@ -45,7 +47,7 @@ in
   test-complex-deps = fetchCljDeps {
     name = "test-complex-clj-deps";
     src = complexProjectSrc;
-    clojure = pkgs.clojure;
+    inherit clojure;
     hash = "";
   };
 
@@ -53,7 +55,7 @@ in
   test-with-aliases = fetchCljDeps {
     name = "test-clj-deps-with-aliases";
     src = complexProjectSrc;
-    clojure = pkgs.clojure;
+    inherit clojure;
     prep = {
       srcRoot = ".";
       aliases = [ ":test" ];
@@ -65,7 +67,7 @@ in
   test-git-deps = fetchCljDeps {
     name = "test-git-clj-deps";
     src = gitDepsProjectSrc;
-    clojure = pkgs.clojure;
+    inherit clojure;
     hash = "";
   };
 
@@ -73,7 +75,7 @@ in
   test-custom-prep = fetchCljDeps {
     name = "test-custom-prep";
     src = testProjectSrc;
-    clojure = pkgs.clojure;
+    inherit clojure;
     prep = "clojure -P -M:dev 2>&1 || true"; # Allow failure for non-existent alias
     hash = "";
   };
@@ -81,7 +83,7 @@ in
   # Test 7: Subdirectory source root using prep attribute set
   test-srcroot =
     let
-      nestedSrc = pkgs.runCommand "nested-project" { } ''
+      nestedSrc = runCommand "nested-project" { } ''
         mkdir -p $out/subdir
         cat > $out/subdir/deps.edn <<EOF
         {:deps {org.clojure/clojure {:mvn/version "1.11.1"}}}
@@ -91,7 +93,7 @@ in
     fetchCljDeps {
       name = "test-srcroot-clj-deps";
       src = nestedSrc;
-      clojure = pkgs.clojure;
+      inherit clojure;
       prep = {
         srcRoot = "subdir";
         aliases = [ ];
@@ -102,7 +104,7 @@ in
   # Test 8: Multiple preparations using prep list
   test-multi-prep =
     let
-      multiProjectSrc = pkgs.runCommand "multi-project" { } ''
+      multiProjectSrc = runCommand "multi-project" { } ''
         mkdir -p $out/project-a
         mkdir -p $out/project-b
         cat > $out/project-a/deps.edn <<EOF
@@ -118,7 +120,7 @@ in
     fetchCljDeps {
       name = "test-multi-prep";
       src = multiProjectSrc;
-      clojure = pkgs.clojure;
+      inherit clojure;
       prep = [
         {
           srcRoot = "project-a";
@@ -136,7 +138,7 @@ in
   test-multiple-aliases = fetchCljDeps {
     name = "test-multiple-aliases";
     src = complexProjectSrc;
-    clojure = pkgs.clojure;
+    inherit clojure;
     prep = {
       aliases = [
         ":test"
@@ -148,9 +150,9 @@ in
 
   # Test 10: Verification test - check output structure
   test-output-structure =
-    pkgs.runCommand "test-fetch-clj-deps-structure"
+    runCommand "test-fetch-clj-deps-structure"
       {
-        nativeBuildInputs = [ pkgs.findutils ];
+        nativeBuildInputs = [ findutils ];
       }
       ''
         # First fetch the dependencies
@@ -163,7 +165,7 @@ in
         EOF
 
         cd $HOME/test-project
-        ${pkgs.clojure}/bin/clojure -P
+        ${clojure}/bin/clojure -P
 
         # Verify expected directories exist
         if [ ! -d "$HOME/.m2" ]; then
@@ -195,13 +197,13 @@ in
       deps = fetchCljDeps {
         name = "integration-test-deps";
         src = testProjectSrc;
-        clojure = pkgs.clojure;
+        inherit clojure;
         hash = "";
       };
     in
-    pkgs.runCommand "test-integration"
+    runCommand "test-integration"
       {
-        nativeBuildInputs = [ pkgs.clojure ];
+        nativeBuildInputs = [ clojure ];
       }
       ''
         # Use the fetched dependencies
@@ -216,7 +218,7 @@ in
         cd test-project
 
         # This should work without network access since deps are cached
-        ${pkgs.clojure}/bin/clojure -e "(println (+ 1 2 3))" > $out
+        ${clojure}/bin/clojure -e "(println (+ 1 2 3))" > $out
 
         # Verify output
         if grep -q "6" $out; then
