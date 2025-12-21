@@ -3,6 +3,8 @@
 
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0";
+    nix-unit.url = "github:nix-community/nix-unit";
+    nix-unit.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   # Flake outputs
@@ -48,9 +50,8 @@
             rama10
             rama11
             rama12
-            ramaBackupProviders
-            buildClojureDepsPackage
-            fetchCljDeps
+            # buildClojureDepsPackage
+            # fetchCljDeps
             ;
         }
       );
@@ -79,11 +80,13 @@
             rama10
             rama11
             rama12
-            ramaBackupProviders
             ;
 
           inherit jdk fetchCljDeps buildClojureDepsPackage;
         };
+
+      # NixOS modules
+      nixosModules.rama = import ./modules/nixos/rama;
 
       # Development environments output by this flake
 
@@ -101,6 +104,9 @@
               # Add the flake's formatter to your project's environment
               self.formatter.${system}
 
+              # Add nix-unit for running tests
+              inputs.nix-unit.packages.${system}.default
+
               # Other packages
               ponysay
             ];
@@ -114,28 +120,44 @@
         }
       );
 
+      # Unit tests using nix-unit
+      #
+      # Run tests with: nix-unit --flake '.#tests.<system>.<test-name>'
+      tests = forEachSupportedSystem (
+        { pkgs, ... }:
+        {
+          fetchCljDeps = pkgs.callPackage ./tests/unit-test-fetch-clj-deps.nix {
+            fetchCljDeps = pkgs.fetchCljDeps;
+          };
+          buildClojureDepsPackage = pkgs.callPackage ./tests/unit-test-build-clj-deps.nix {
+            buildClojureDepsPackage = pkgs.buildClojureDepsPackage;
+          };
+        }
+      );
+
       # Checks output for CI/testing
       #
       # Run all checks with: nix flake check
       # Run specific check with: nix build .#checks.<system>.<check-name>
       checks = forEachSupportedSystem (
-        { pkgs, ... }:
-        let
-          inherit (pkgs) buildClojureDepsPackage fetchCljDeps;
-
-          # Import test suites with callPackage to provide dependencies
-          buildTests = pkgs.callPackage ./tests/test-build-clj-deps.nix {
-            inherit buildClojureDepsPackage;
-          };
-          fetchTests = pkgs.callPackage ./tests/test-fetch-clj-deps.nix {
-            inherit fetchCljDeps;
-          };
-
-          # Filter out non-derivation attributes like 'override' and 'overrideDerivation'
-          filterDerivations = attrs: pkgs.lib.filterAttrs (name: value: pkgs.lib.isDerivation value) attrs;
-        in
-        # Merge both test suites into checks, filtering out non-derivations
-        (filterDerivations buildTests) // (filterDerivations fetchTests)
+        { pkgs, system }:
+        {
+          # Run nix-unit tests as checks
+          unitTests =
+            pkgs.runCommand "unit-tests"
+              {
+                nativeBuildInputs = [ inputs.nix-unit.packages.${system}.default ];
+              }
+              ''
+                export HOME="$(realpath .)"
+                # The nix derivation must be able to find all used inputs in the nix-store because it cannot download it during buildTime.
+                nix-unit --eval-store "$HOME" \
+                --extra-experimental-features flakes \
+                --override-input nixpkgs ${nixpkgs} \
+                --flake ${self}#tests
+                touch $out
+              '';
+        }
       );
 
       # Nix formatter

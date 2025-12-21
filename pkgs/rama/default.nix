@@ -44,9 +44,11 @@
 let
   defaultJdk = jdk;
 
-  s3BackupProvider = fetchurl {
-    url = "https://github.com/redplanetlabs/rama-s3-backup-provider/releases/download/1.1.0/rama-s3-backup-provider-1.1.0.jar";
-    sha256 = "sha256-/VX493rE/zPJD2j1avGDL8lPRU7/22WgKvkQIb9Rrwc=";
+  availableBackupProviders = {
+    s3 = fetchurl {
+      url = "https://github.com/redplanetlabs/rama-s3-backup-provider/releases/download/1.1.0/rama-s3-backup-provider-1.1.0.jar";
+      sha256 = "sha256-/VX493rE/zPJD2j1avGDL8lPRU7/22WgKvkQIb9Rrwc=";
+    };
   };
 
   mkRama =
@@ -66,6 +68,8 @@ let
         stripRoot = false;
         inherit sha256;
       };
+
+      nativeBuildInputs = [ ] ++ backupProviders;
 
       buildInputs = [
         python3
@@ -99,6 +103,10 @@ let
         runHook postInstall
       '';
 
+      passthru = {
+        inherit availableBackupProviders;
+      };
+
       meta = {
         description = "Rama - End-to-end data processing framework";
         homepage = "https://redplanetlabs.com";
@@ -121,9 +129,5 @@ in
   rama12 = mkRama {
     version = "1.2.0";
     sha256 = "sha256-W85f97QZ33ykADesGV1vN3wHZOD2kuYMQ+d2zReZKJI=";
-  };
-
-  ramaBackupProviders = {
-    s3 = s3BackupProvider;
   };
 }

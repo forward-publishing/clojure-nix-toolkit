@@ -17,11 +17,16 @@ let
 
   cfg = config.services.rama;
 
+  availableBackupProviders = cfg.package.availableBackupProviders;
+
   ramaPackage = cfg.package.override (previous: {
     ramaDir = cfg.dataDir;
     backupProviders =
       previous.backupProviders
-      ++ (lib.optional (lib.attrsets.hasAttrByPath [ "backup" "s3" ] cfg) pkgs.ramaBackupProviders.s3);
+      ++ (lib.optional (lib.attrsets.hasAttrByPath [
+        "backup"
+        "s3"
+      ] cfg) availableBackupProviders.s3);
   });
 
   backupType = types.attrTag {
