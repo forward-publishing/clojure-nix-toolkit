@@ -35,8 +35,16 @@
             };
           }
         );
+
+      withPkgsFromArgs = p: { pkgs, ... }@args: pkgs.callPackage p { } (args.removeAttrs [ "pkgs" ]);
+
     in
     {
+      lib = {
+        buildClojureDepsPackage = withPkgsFromArgs ./build-clojure-deps-package.nix;
+        fetchCljDeps = withPkgsFromArgs ./deps/fetch-clj-deps.nix;
+      };
+
       # goals:
       # - means to build a clojure app (compiled or no) that can be
       # run with the clojure command
@@ -50,8 +58,6 @@
             rama10
             rama11
             rama12
-            # buildClojureDepsPackage
-            # fetchCljDeps
             ;
         }
       );
@@ -98,24 +104,15 @@
         { pkgs, system }:
         {
           # Run `nix develop` to activate this environment or `direnv allow` if you have direnv installed
-          default = pkgs.mkShellNoCC {
+          default = pkgs.mkShell {
             # The Nix packages provided in the environment
-            packages = with pkgs; [
+            packages = [
               # Add the flake's formatter to your project's environment
               self.formatter.${system}
 
               # Add nix-unit for running tests
               inputs.nix-unit.packages.${system}.default
-
-              # Other packages
-              ponysay
             ];
-
-            # Set any environment variables for your development environment
-            env = { };
-
-            # Add any shell logic you want executed when the environment is activated
-            shellHook = "";
           };
         }
       );
