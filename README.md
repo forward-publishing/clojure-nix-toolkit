@@ -16,12 +16,21 @@ The package builder works in layered manner (similar with multi-layer Dockerfile
 ### Packages
 
 - **kmono**: Clojure monorepo management tool (v4.10.2)
-- **rama10, rama11, rama12**: Rama distributed computing platform packages
-- **ramaBackupProviders**: Backup provider plugins for Rama
+- **rama10, rama11, rama12**: Rama distributed computing platform packages (can be customized with backup providers via `.override`)
 
 ### NixOS Modules
 
 - **services.rama**: NixOS service module for declaratively running Rama conductor and supervisor services under nixos
+
+## Flake Outputs
+
+This flake provides the following outputs:
+
+- **`packages.<system>`**: Pre-built packages (kmono, rama10, rama11, rama12)
+- **`overlays.default`**: Overlay that adds packages and build functions to nixpkgs
+- **`lib.buildClojureDepsPackage`**: Function to build Clojure projects with dependency caching
+- **`lib.fetchCljDeps`**: Function to fetch Clojure dependencies as a fixed-output derivation
+- **`nixosModules.rama`**: NixOS service module for Rama
 
 ## Usage
 
@@ -40,19 +49,22 @@ Apply the overlay to get access to packages through `pkgs`:
     clojure-nix-toolkit.url = "github:forward-distribution/clojure-nix-toolkit";
   };
 
-  outputs = { self, nixpkgs, clojure-nix-toolkit }: {
-    pkgs = import nixpkgs {
-      system = "x86_64-linux";
-      overlays = [ clojure-nix-toolkit.overlays.default ];
+  outputs = { self, nixpkgs, clojure-nix-toolkit }: 
+    let
+      pkgs = import nixpkgs {
+        system = "x86_64-linux";
+        overlays = [ clojure-nix-toolkit.overlays.default ];
+      };
+    in {
+      # Now you can use packages from the overlay
+      environment.systemPackages = [
+        pkgs.kmono
+        pkgs.rama12
+        # Build functions are also available:
+        # pkgs.buildClojureDepsPackage
+        # pkgs.fetchCljDeps
+      ];
     };
-    
-    # Now you can use packages from the overlay
-    environment.systemPackages = [
-      pkgs.kmono
-      pkgs.rama12
-      pkgs.ramaBackupProviders
-    ];
-  };
 }
 ```
 
@@ -88,30 +100,108 @@ Alternatively, reference packages directly from the flake output:
 
 ### Building Clojure Packages
 
-The `buildClojureDepsPackage` function is available through the overlay and allows you to build Clojure projects with proper dependency caching.
+The `buildClojureDepsPackage` function is available both through the overlay (`pkgs.buildClojureDepsPackage`) and as a lib function (`clojure-nix-toolkit.lib.buildClojureDepsPackage`) and allows you to build Clojure projects with proper dependency caching.
 
 ```nix
-pkgs.clojure.buildClojureDepsPackage {
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+    clojure-nix-toolkit.url = "github:forward-distribution/clojure-nix-toolkit";
+  };
+  
+  outputs = { self, nixpkgs, flake-utils, clojure-nix-toolkit }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ clojure-nix-toolkit.overlays.default ];
+        };
+      in
+      {
+        packages.default = pkgs.buildClojureDepsPackage {
+          pname = "my-clojure-app";
+          version = "1.0.0";
+          src = ./.;
+          
+          # Use empty string for initial build to get hash
+          cljDepsHash = "";
+
+          # Optional: customize dependency fetching
+          # Can be a string (shell command), an attribute set, or a list of attribute sets
+          # Default is { srcRoot = "."; } which runs "clojure -P" in the root directory
+          prep = {
+            srcRoot = ".";
+            aliases = [":dev" ":test" ":build"];
+          };
+          
+          # Alternatively, use string form for custom commands:
+          # prep = ''
+          #   clojure -P -A:build 
+          #   kmono exec -F 'io.forward-publishing.janus/chm-backend' clojure -P -A:dev:test
+          # '';
+          # Or multiple preparations:
+          # prep = [
+          #   { srcRoot = "project-a"; aliases = [":dev"]; }
+          #   { srcRoot = "project-b"; aliases = [":test"]; }
+          # ];
+
+          buildPhase = ''
+            clojure -T:build uber
+          '';
+
+          installPhase = ''
+            mkdir -p $out/bin
+            cp target/my-app.jar $out/bin/
+          '';
+        };
+      }
+    );
+}
+```
+
+The build process works in two stages:
+
+1. **Dependency Fetching**: Creates a fixed-output derivation containing all Maven and git dependencies using the `prep` parameter
+2. **Project Build**: Provides `clojure`/`clj` commands that use the cached dependencies
+
+To get the correct `cljDepsHash`:
+1. Set it to an empty string initially
+2. Run the build and it will fail with the expected hash
+3. Update `cljDepsHash` with the provided hash
+
+The `prep` parameter allows you to customize how dependencies are fetched:
+- **String**: Shell commands to execute (e.g., `"clojure -P -A:dev:test"`)
+- **Attribute set**: `{ srcRoot = "."; aliases = [":dev" ":test"]; }` - changes to srcRoot and runs `clojure -P` with the specified aliases
+- **List of attribute sets**: Runs multiple preparation steps sequentially
+
+The preparation runs with `clojure` and `clj` commands configured to cache dependencies in the output derivation.
+
+### Fetching Dependencies Separately
+
+You can also use `fetchCljDeps` (available as `pkgs.fetchCljDeps` or `clojure-nix-toolkit.lib.fetchCljDeps`) to fetch dependencies separately and reuse them across multiple builds:
+
+```nix
+let
+  myDeps = pkgs.fetchCljDeps {
+    name = "my-app-deps";
+    src = ./.;
+    prep = { srcRoot = "."; aliases = [":dev" ":test"]; };
+    hash = "sha256-...";
+  };
+in
+pkgs.buildClojureDepsPackage {
   pname = "my-clojure-app";
   version = "1.0.0";
   src = ./.;
   
-  # Use empty string for initial build to get hash
-  cljDepsHash = "";
-
-  # Optional: customize the phase used to fetch dependencies
-  # Default is "clojure -P" which prepares all dependencies
-  prepPhase = ''
-    # prep build deps 
-    clojure -P -A:build 
-    # e.g. prep a sub-project using kmono
-    kmono exec -F 'io.forward-publishing.janus/chm-backend' clojure -P -A:dev:test
-  ''
-
+  # Use the pre-fetched dependencies
+  cljDeps = myDeps;
+  
   buildPhase = ''
     clojure -T:build uber
   '';
-
+  
   installPhase = ''
     mkdir -p $out/bin
     cp target/my-app.jar $out/bin/
@@ -119,19 +209,10 @@ pkgs.clojure.buildClojureDepsPackage {
 }
 ```
 
-The build process works in two stages:
-
-1. **Dependency Fetching**: Creates a fixed-output derivation containing all Maven and git dependencies using the `prepPhase` 
-2. **Project Build**: Provides wrapped `clojure`/`clj` commands that use the cached dependencies
-
-To get the correct `cljDepsHash`:
-1. Set it to an empty string initially
-2. Run the build and it will fail with the expected hash
-3. Update `cljDepsHash` with the provided hash
-
-The `prepPhase` parameter allows you to customize the shell commands used to fetch dependencies. This is useful when you need dependencies from specific aliases like `:dev`, `:test`, or build tool aliases. The `prepPhase` runs in the buildPhase context where both `clojure` and `clj` commands are available with proper dependency caching configured. 
-
-
+This is useful when you want to:
+- Share the same dependencies across multiple derivations
+- Have more control over the dependency fetching process
+- Separate dependency management from the build process
 
 ### Configuring Rama Services in NixOS
 
@@ -149,23 +230,25 @@ The flake provides a NixOS module for declaratively running Rama conductor and s
       system = "x86_64-linux";
       modules = [
         clojure-nix-toolkit.nixosModules.rama
-        {
+        ({ pkgs, ... }: {
           services.rama = {
             conductor.enable = true;
             
-            package = pkgs.rama12;
+            package = pkgs.rama12;  # Available after applying overlay or directly reference clojure-nix-toolkit.packages.${system}.rama12
             dataDir = "/var/lib/rama";
             logDir = "/var/log/rama";
             
+            # Settings use dot-separated keys (not nested attributes)
             settings = {
               "conductor.host" = "localhost";
             };
             
+            # Optional backup configuration
             backup = {
               s3.targetBucket = "my-backup-bucket";
             };
           };
-        }
+        })
       ];
     };
   };
