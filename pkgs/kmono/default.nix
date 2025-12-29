@@ -3,20 +3,20 @@ let
   system = stdenvNoCC.hostPlatform.system;
   tarballs = {
     "x86_64-linux" = {
-      url = "https://github.com/kepler16/kmono/releases/download/v4.10.2/kmono-linux-amd64.tar.gz";
-      sha256 = "0k10skmlmcfds37g1828sh19cx04c68r9qf9k2s7izczw0fk8ypl";
+      url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-linux-amd64.tar.gz";
+      sha256 = "0g5yksvl5ylv2ch5n6i34cmx7chsqhsch86a267990831vjg76x8";
     };
     "aarch64-linux" = {
-      url = "https://github.com/kepler16/kmono/releases/download/v4.10.2/kmono-linux-arm64.tar.gz";
-      sha256 = "1n5b344ms9vj085p8f5k7ws6lkgcjx08r236l21sfh64hq74f44f";
+      url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-linux-arm64.tar.gz";
+      sha256 = "05jfyjh75lvkpv6x61m4vwasyh9karnqp6mj6z0xc1zmyiih3xq9";
     };
     "x86_64-darwin" = {
-      url = "https://github.com/kepler16/kmono/releases/download/v4.10.2/kmono-macos-amd64.tar.gz";
-      sha256 = "0gqh54xs94pl5ahxg6vzj18ac0ilvj1q31zcy98ny1cg6da4miqb";
+      url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-macos-amd64.tar.gz";
+      sha256 = "0a4a51f4knqi9q6ls047c2jmc269vgr7dci7vv1w01l94r67nl1y";
     };
     "aarch64-darwin" = {
-      url = "https://github.com/kepler16/kmono/releases/download/v4.10.2/kmono-macos-arm64.tar.gz";
-      sha256 = "1ci5mhikw218l56z8dy1mflnh4s47nzbps29yflnyxz3n57hbx8a";
+      url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-macos-arm64.tar.gz";
+      sha256 = "0j5adycfvgs3bnip2b113yvxi037kqv6pqdwb1cjjz11n2s78k0f";
     };
   };
   tarball = tarballs.${system};
@@ -24,7 +24,7 @@ let
 in
 stdenvNoCC.mkDerivation {
   pname = "kmono";
-  version = "4.10.2";
+  version = "4.10.3";
 
   src = fetchTarball tarball;
 

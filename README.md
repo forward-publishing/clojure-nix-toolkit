@@ -15,7 +15,7 @@ The package builder works in layered manner (similar with multi-layer Dockerfile
 
 ### Packages
 
-- **kmono**: Clojure monorepo management tool (v4.10.2)
+- **kmono**: Clojure monorepo management tool (v4.10.3)
 - **rama10, rama11, rama12**: Rama distributed computing platform packages (can be customized with backup providers via `.override`)
 
 ### NixOS Modules
