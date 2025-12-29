@@ -130,4 +130,14 @@ in
     version = "1.2.0";
     sha256 = "sha256-W85f97QZ33ykADesGV1vN3wHZOD2kuYMQ+d2zReZKJI=";
   };
+
+  rama13 = mkRama {
+    version = "1.3.0";
+    sha256 = "sha256-PEG5Bg3bg55sU9KDyXGoUvJF4U2a41Xv8bYQXaENk8Y=";
+  };
+
+  rama14 = mkRama {
+    version = "1.4.0";
+    sha256 = "sha256-f/whpKTemCAeX7kbl40fKXF6Rz0JLg4ODLEOz23Gt58=";
+  };
 }

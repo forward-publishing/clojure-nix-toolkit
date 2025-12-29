@@ -58,6 +58,8 @@
             rama10
             rama11
             rama12
+            rama13
+            rama14
             ;
         }
       );
@@ -88,6 +90,8 @@
             rama10
             rama11
             rama12
+            rama13
+            rama14
             ;
 
           inherit jdk fetchCljDeps buildClojureDepsPackage;
