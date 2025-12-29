@@ -1,4 +1,4 @@
-{ stdenvNoCC }:
+{ stdenvNoCC, lib }:
 let
   system = stdenvNoCC.hostPlatform.system;
   tarballs = {
@@ -16,7 +16,7 @@ let
     };
     "aarch64-darwin" = {
       url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-macos-arm64.tar.gz";
-      sha256 = "0j5adycfvgs3bnip2b113yvxi037kqv6pqdwb1cjjz11n2s78k0f";
+      sha256 = "11vrp5k5wzz4z9xs4pvb3iw8dipssvy1ngfszn04dxjyb94dg795";
     };
   };
   tarball = tarballs.${system};
@@ -30,7 +30,24 @@ stdenvNoCC.mkDerivation {
 
   installPhase = ''
     runHook preInstall
+
     mkdir -p $out/bin
-    install -m755 kmono $out/bin 
+    install -m755 kmono $out/bin
+
+    runHook postInstall
   '';
+
+  meta = with lib; {
+    description = "A monorepo/workspace tool for Clojure tools.deps projects";
+    homepage = "https://github.com/kepler16/kmono";
+    license = licenses.mit;
+    maintainers = [ maintainers.oivanovs ];
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+      "x86_64-darwin"
+      "aarch64-darwin"
+    ];
+    mainProgram = "kmono";
+  };
 }
