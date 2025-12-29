@@ -42,7 +42,7 @@
     {
       lib = {
         buildClojureDepsPackage = withPkgsFromArgs ./build-clojure-deps-package.nix;
-        fetchCljDeps = withPkgsFromArgs ./deps/fetch-clj-deps.nix;
+        fetchCljDeps = withPkgsFromArgs ./pkgs/build-support/clojure/fetch-clj-deps.nix;
       };
 
       # goals:
@@ -69,8 +69,10 @@
           jdk = final.zulu25;
 
           ramaPackages = final.callPackage ./pkgs/rama { };
-          fetchCljDeps = final.callPackage ./deps/fetch-clj-deps.nix { };
-          buildClojureDepsPackage = final.callPackage ./deps/build-clj-deps-package.nix { };
+          fetchCljDeps = final.callPackage ./pkgs/build-support/clojure/fetch-clj-deps.nix { };
+          buildClojureDepsPackage =
+            final.callPackage ./pkgs/build-support/clojure/build-clj-deps-package.nix
+              { };
         in
         {
 
