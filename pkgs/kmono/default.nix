@@ -8,7 +8,7 @@ let
     };
     "aarch64-linux" = {
       url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-linux-arm64.tar.gz";
-      sha256 = "05jfyjh75lvkpv6x61m4vwasyh9karnqp6mj6z0xc1zmyiih3xq9";
+      sha256 = "0nlbizjcz78pphaj0c9ss0xg3lh08y73b9agmg7fjqsc8kbvg2i8";
     };
     "x86_64-darwin" = {
       url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-macos-amd64.tar.gz";
