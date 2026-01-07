@@ -27,9 +27,6 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@v3
-        with:
-          extra-conf: |
-            allow-unfree = true
 
       - name: Set up FlakeHub Cache
         uses: DeterminateSystems/flakehub-cache-action@main
