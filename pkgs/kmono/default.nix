@@ -4,7 +4,7 @@ let
   tarballs = {
     "x86_64-linux" = {
       url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-linux-amd64.tar.gz";
-      sha256 = "0g5yksvl5ylv2ch5n6i34cmx7chsqhsch86a267990831vjg76x8";
+      sha256 = "09jlx1j5wp7iy680zsrvik8d92v4lmg8f4vsmkcnhwg8pf5andca";
     };
     "aarch64-linux" = {
       url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-linux-arm64.tar.gz";
