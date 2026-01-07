@@ -28,8 +28,11 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/determinate-nix-action@v3
 
-      - name: Set up FlakeHub Cache
-        uses: DeterminateSystems/flakehub-cache-action@main
+      # TODO: Switch back to FlakeHub Cache when ready
+      # - name: Set up FlakeHub Cache
+      #   uses: DeterminateSystems/flakehub-cache-action@main
+      - name: Set up Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Build devShells
         run: |
