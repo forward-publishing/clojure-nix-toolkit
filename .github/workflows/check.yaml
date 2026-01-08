@@ -1,0 +1,40 @@
+name: Check and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  check:
+    name: Nix Checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      # TODO: Switch back to FlakeHub Cache when ready
+      # - name: Set up FlakeHub Cache
+      #   uses: DeterminateSystems/flakehub-cache-action@main
+      - name: Set up Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Run flake check
+        run: nix flake check
+
+      - name: Check formatting
+        run: nix fmt -- --check .
+
+  build:
+    name: Build
+    needs: check
+    uses: ./.github/workflows/build.yaml
+    secrets: inherit

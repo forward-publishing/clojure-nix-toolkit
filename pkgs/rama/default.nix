@@ -118,12 +118,12 @@ in
 {
   rama10 = mkRama {
     version = "1.0.0";
-    sha256 = "sha256-K2hKrbbTyl3E/PsbB0LfhTKwLdAqyA9cHmLC1LhGyvw=";
+    sha256 = "sha256-f4X9UqLuBqBbrYBtMiHCmoibct69qSBBhNWIXcjVXRc=";
   };
 
   rama11 = mkRama {
     version = "1.1.0";
-    sha256 = "sha256-9hAMrqHJE8bPj1musaQO1q1FhceumI7y4kCYcJb1Hl4=";
+    sha256 = "sha256-Cd1hmb3XQg4FZvU5ZpEEHSYwtABGS8XFw1rET+R1f60=";
   };
 
   rama12 = mkRama {

@@ -1,0 +1,47 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.system }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            runner: ubuntu-24.04
+          - system: aarch64-linux
+            runner: ubuntu-24.04-arm
+          - system: aarch64-darwin
+            runner: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      # TODO: Switch back to FlakeHub Cache when ready
+      # - name: Set up FlakeHub Cache
+      #   uses: DeterminateSystems/flakehub-cache-action@main
+      - name: Set up Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build devShells
+        run: |
+          nix flake show --json 2>/dev/null | \
+            jq -r '.devShells."${{ matrix.system }}" // {} | keys[]' | \
+            xargs -I {} nix build .#devShells.${{ matrix.system }}.{}
+
+      - name: Build packages
+        run: |
+          nix flake show --json 2>/dev/null | \
+            jq -r '.packages."${{ matrix.system }}" // {} | keys[]' | \
+            xargs -I {} nix build .#packages.${{ matrix.system }}.{}
