@@ -1,0 +1,59 @@
+name: Update Flake Inputs and Packages
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Update Dependencies
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      - name: Set up Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Run update-flake
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: nix develop -c update-flake
+
+      - name: Format generated files
+        run: nix fmt
+
+      - name: Check for package changes
+        id: changes
+        run: |
+          if git diff --quiet pkgs/; then
+            echo "packages_changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "packages_changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.packages_changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: auto-update/flake
+          commit-message: "chore: update flake inputs and packages"
+          title: "chore: update flake inputs and packages"
+          body: |
+            Automated daily update of flake inputs and packages.
+
+            ### Changes
+            - Updated flake inputs via `nix flake update`
+            - Updated package coordinates via `update.nu`
+            - Formatted generated files with `nix fmt`
+          labels: dependencies,automated
+          delete-branch: true
