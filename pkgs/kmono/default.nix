@@ -1,40 +1,33 @@
-{ stdenvNoCC, lib }:
+{
+  stdenvNoCC,
+  lib,
+  fetchurl,
+  nushell,
+  writeShellScript,
+}:
 let
+  coords = import ./coords.nix;
   system = stdenvNoCC.hostPlatform.system;
-  tarballs = {
-    "x86_64-linux" = {
-      url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-linux-amd64.tar.gz";
-      sha256 = "09jlx1j5wp7iy680zsrvik8d92v4lmg8f4vsmkcnhwg8pf5andca";
-    };
-    "aarch64-linux" = {
-      url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-linux-arm64.tar.gz";
-      sha256 = "0nlbizjcz78pphaj0c9ss0xg3lh08y73b9agmg7fjqsc8kbvg2i8";
-    };
-    "x86_64-darwin" = {
-      url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-macos-amd64.tar.gz";
-      sha256 = "0a4a51f4knqi9q6ls047c2jmc269vgr7dci7vv1w01l94r67nl1y";
-    };
-    "aarch64-darwin" = {
-      url = "https://github.com/kepler16/kmono/releases/download/v4.10.3/kmono-macos-arm64.tar.gz";
-      sha256 = "11vrp5k5wzz4z9xs4pvb3iw8dipssvy1ngfszn04dxjyb94dg795";
-    };
-  };
-  tarball = tarballs.${system};
-
+  tarball = coords.platforms.${system};
 in
 stdenvNoCC.mkDerivation {
   pname = "kmono";
-  version = "4.10.3";
+  inherit (coords) version;
 
-  src = fetchTarball tarball;
+  src = fetchurl tarball;
+  sourceRoot = ".";
 
   installPhase = ''
     runHook preInstall
-
     mkdir -p $out/bin
     install -m755 kmono $out/bin
-
     runHook postInstall
+  '';
+
+  passthru.updateScript = writeShellScript "update-kmono" ''
+    set -euo pipefail
+    cd pkgs/kmono
+    ${lib.getExe nushell} ./update.nu
   '';
 
   meta = with lib; {

@@ -118,6 +118,27 @@
 
               # Add nix-unit for running tests
               inputs.nix-unit.packages.${system}.default
+
+              # Tools for running update scripts
+              pkgs.nushell
+              pkgs.gh
+
+              (pkgs.writeShellApplication {
+                name = "update-flake";
+                runtimeInputs = with pkgs; [
+                  nushell
+                  gh
+                ];
+                text = ''
+                  echo "> Updating flake inputs..."
+                  nix flake update
+
+                  echo "> Updating kmono..."
+                  (cd pkgs/kmono && nu ./update.nu)
+
+                  echo "> All updates complete"
+                '';
+              })
             ];
           };
         }
