@@ -23,6 +23,6 @@ jobs:
       - name: Publish to FlakeHub
         uses: DeterminateSystems/flakehub-push@main
         with:
-          name: forward-distribution/clojure-nix-toolkit
+          name: forward-publishing/clojure-nix-toolkit
           rolling: true
           visibility: public
