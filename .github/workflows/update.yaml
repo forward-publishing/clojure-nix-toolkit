@@ -30,7 +30,7 @@ jobs:
         run: nix develop -c update-flake
 
       - name: Format generated files
-        run: git ls-files -z '*.nix' | xargs -0 -r nix fmt
+        run: git ls-files '*.nix' | while read -r f; do [ -s "$f" ] && echo "$f"; done | xargs -r nix fmt
 
       - name: Check for package changes
         id: changes

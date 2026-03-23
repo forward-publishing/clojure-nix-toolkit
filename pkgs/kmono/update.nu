@@ -41,7 +41,12 @@ let final = {
   platforms: $entries
 }
 
-$final
+let result = ($final
   | to json
-  | nix eval --pretty --impure --expr 'builtins.fromJSON (builtins.readFile /dev/stdin)'
-  | save -f coords.nix
+  | nix eval --pretty --impure --expr 'builtins.fromJSON (builtins.readFile /dev/stdin)')
+
+if ($result | is-empty) {
+  error make { msg: "nix eval produced empty output, refusing to overwrite coords.nix" }
+}
+
+$result | save -f coords.nix
