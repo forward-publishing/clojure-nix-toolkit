@@ -15,7 +15,6 @@
       supportedSystems = [
         "x86_64-linux" # 64-bit Intel/AMD Linux
         "aarch64-linux" # 64-bit ARM Linux
-        "x86_64-darwin" # 64-bit Intel macOS
         "aarch64-darwin" # 64-bit ARM macOS
       ];
 
@@ -55,6 +54,7 @@
         {
           inherit (pkgs)
             kmono
+            clj-kondo
             rama10
             rama11
             rama12
@@ -75,6 +75,7 @@
           buildClojureDepsPackage =
             final.callPackage ./pkgs/build-support/clojure/build-clj-deps-package.nix
               { };
+          cljKondo = final.callPackage ./pkgs/clj-kondo.nix { };
         in
         {
 
@@ -93,6 +94,8 @@
             rama13
             rama14
             ;
+
+          clj-kondo = cljKondo;
 
           inherit jdk fetchCljDeps buildClojureDepsPackage;
         };
